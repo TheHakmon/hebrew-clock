@@ -8,6 +8,7 @@
 #include <time.h>
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
+#include <RTClib.h>
 
 // XIAO ESP32C3 → Waveshare 7.5" V2 wiring
 #define EPD_CS   D2
@@ -38,6 +39,10 @@ String   location         = "Tel Aviv";
 bool     sleepEnabled = false;
 String   sleepStart   = "22:00";  // HH:MM 24h
 String   sleepEnd     = "06:00";
+
+// RTC
+bool       rtcEnabled = false;
+RTC_DS3231 rtc;
 
 // ── Time helpers ──────────────────────────────────────
 
@@ -168,6 +173,14 @@ static const char CONFIG_HTML[] PROGMEM = R"(<!DOCTYPE html>
     <input type="number" name="full_every" value="{{FULL_EVERY}}" min="0">
     <p class="note">0 = always full refresh</p>
 
+    <hr>
+
+    <div class="row">
+      <input type="checkbox" name="rtc_en" id="rtc_en" value="1" {{RTC_EN_CHECKED}}>
+      <span>Enable DS3231 RTC module</span>
+    </div>
+    <p class="note">Wire SDA&rarr;D4, SCL&rarr;D5. On NTP success the RTC is updated; if NTP is unavailable the system clock is restored from the RTC so the sleep schedule keeps working.</p>
+
     <button type="submit">Save &amp; restart</button>
   </form>
   <p class="saved" id="sv">Saved! Device is restarting...</p>
@@ -204,6 +217,7 @@ void handleRoot() {
     html.replace("{{SLEEP_END}}",        sleepEnd);
     html.replace("{{INTERVAL}}",         String(refreshInterval));
     html.replace("{{FULL_EVERY}}",       String(fullRefreshEvery));
+    html.replace("{{RTC_EN_CHECKED}}",   rtcEnabled ? "checked" : "");
     server.send(200, "text/html; charset=utf-8", html);
 }
 
@@ -215,6 +229,7 @@ void handleConfig() {
     if (server.hasArg("location"))
         location = server.arg("location");
     sleepEnabled = server.hasArg("sleep_en");
+    rtcEnabled   = server.hasArg("rtc_en");
     if (server.hasArg("sleep_start") && server.arg("sleep_start").length() == 5)
         sleepStart = server.arg("sleep_start");
     if (server.hasArg("sleep_end") && server.arg("sleep_end").length() == 5)
@@ -233,6 +248,7 @@ void handleConfig() {
     prefs.putString("sleep_end",   sleepEnd);
     prefs.putUInt("interval",      refreshInterval);
     prefs.putUChar("full_every",   fullRefreshEvery);
+    prefs.putBool("rtc_en",        rtcEnabled);
     prefs.end();
 
     Serial.println("Config saved — restarting");
@@ -400,13 +416,6 @@ void setup() {
     showTextScreen("Connected", WiFi.localIP().toString());
     delay(2000);
 
-    // Sync time via NTP (Israel timezone with automatic DST)
-    configTzTime("IST-2IDT,M3.4.4/26,M10.5.0", "pool.ntp.org");
-    Serial.print("NTP sync");
-    struct tm ti;
-    for (int i = 0; i < 10 && !getLocalTime(&ti, 1000); i++) Serial.print(".");
-    Serial.println(getLocalTime(&ti, 0) ? " OK" : " failed (sleep window unavailable)");
-
     prefs.begin("epaper", true);
     imageUrl         = prefs.getString("url",         "");
     refreshInterval  = prefs.getUInt("interval",      60);
@@ -416,11 +425,49 @@ void setup() {
     sleepEnabled     = prefs.getBool("sleep_en",      false);
     sleepStart       = prefs.getString("sleep_start", "22:00");
     sleepEnd         = prefs.getString("sleep_end",   "06:00");
+    rtcEnabled       = prefs.getBool("rtc_en",        false);
     prefs.end();
+
+    // Init RTC if enabled
+    bool rtcAvailable = false;
+    if (rtcEnabled) {
+        if (rtc.begin()) {
+            rtcAvailable = true;
+            Serial.println("RTC found");
+        } else {
+            Serial.println("RTC not found — check wiring (SDA→D4, SCL→D5)");
+        }
+    }
+
+    // Sync time via NTP (Israel timezone with automatic DST)
+    configTzTime("IST-2IDT,M3.4.4/26,M10.5.0", "pool.ntp.org");
+    Serial.print("NTP sync");
+    struct tm ti;
+    for (int i = 0; i < 10 && !getLocalTime(&ti, 1000); i++) Serial.print(".");
+    bool ntpOk = getLocalTime(&ti, 0);
+    Serial.println(ntpOk ? " OK" : " failed");
+
+    if (rtcAvailable) {
+        if (ntpOk) {
+            // Keep RTC accurate by writing the fresh NTP time to it
+            rtc.adjust(DateTime(time(nullptr)));
+            Serial.println("RTC synced from NTP");
+        } else if (!rtc.lostPower()) {
+            // NTP unavailable — restore system clock from RTC
+            struct timeval tv = { .tv_sec = (time_t)rtc.now().unixtime(), .tv_usec = 0 };
+            settimeofday(&tv, nullptr);
+            Serial.println("System time restored from RTC");
+        } else {
+            Serial.println("RTC lost power — time unreliable");
+        }
+    } else if (!ntpOk) {
+        Serial.println("NTP failed and no RTC — sleep window unavailable");
+    }
 
     Serial.printf("Font: %s  Location: %s\n", selectedFont.c_str(), location.c_str());
     Serial.printf("Sleep: %s  %s – %s\n",
                   sleepEnabled ? "on" : "off", sleepStart.c_str(), sleepEnd.c_str());
+    Serial.printf("RTC: %s\n", rtcEnabled ? (rtcAvailable ? "enabled" : "enabled (not found)") : "disabled");
 
     server.on("/",       HTTP_GET,  handleRoot);
     server.on("/config", HTTP_POST, handleConfig);
