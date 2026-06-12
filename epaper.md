@@ -60,6 +60,7 @@ Install each library via **Sketch → Include Library → Manage Libraries…**:
 | **WiFiManager** by tzapu | ≥ 2.0 | captive-portal Wi-Fi setup |
 | **PNGdec** by Larry Bank | ≥ 1.0 | in-RAM PNG decoder |
 | **Adafruit GFX** | ≥ 1.11 | required by GxEPD2 |
+| **RTClib** by Adafruit | ≥ 2.1 | DS3231 RTC support (optional) |
 
 > **Note:** The sketch uses `WiFiClientSecure`, `Preferences`, `HTTPClient`, `WebServer`, and `time.h` — all bundled with the ESP32 Arduino core; no separate install needed.
 
@@ -91,6 +92,7 @@ After connecting, the device runs a small web server on port 80. Open `http://<d
 | **Sleep start / Sleep end** | 24-hour HH:MM times defining the sleep window (overnight ranges supported, e.g. 22:00 – 06:00). |
 | **Refresh interval** | How often (seconds) to fetch a new image outside the sleep window. |
 | **Full refresh every N** | Partial refreshes are faster but ghosting accumulates. Set to 0 for always-full. |
+| **Enable DS3231 RTC module** | When checked, the device uses an attached DS3231 for timekeeping. See [RTC module](#optional-ds3231-rtc-module) below. |
 
 Click **Save & restart** — the device saves settings to flash and reboots.
 
@@ -111,6 +113,42 @@ Example:
 ```
 https://clk.cloudguard.co.il/?font=Heebo-Bold&sleeptime=0&location=Raanana
 ```
+
+---
+
+## Optional: DS3231 RTC Module
+
+By default the device syncs time from NTP on every boot — no extra hardware needed. If you want the sleep schedule to survive power cuts or temporary Wi-Fi outages, add a **DS3231** real-time clock module.
+
+### Why bother?
+
+The ESP32's internal RTC resets to epoch 0 whenever power is removed. Without NTP (e.g. the router is down at boot), `isInSleepWindow()` returns `false` and the display will fetch images at the normal rate all night. A DS3231 with its CR2032 backup battery keeps accurate time (±2 ppm) across power cycles, so the sleep schedule always works.
+
+### Wiring
+
+Connect the DS3231 breakout to the free I2C pins — the SPI bus used by the ePaper display does not conflict.
+
+| DS3231 | XIAO ESP32C3 |
+|--------|-------------|
+| VCC | 3V3 |
+| GND | GND |
+| SDA | D4 |
+| SCL | D5 |
+
+### Enabling in the config UI
+
+1. Wire the module as above.
+2. Open `http://<device-ip>/` in a browser.
+3. Tick **Enable DS3231 RTC module** and click **Save & restart**.
+
+### Boot behaviour
+
+| Situation | What happens |
+|-----------|-------------|
+| NTP sync succeeds | Fresh NTP time is written back to the DS3231, keeping it drift-free. |
+| NTP fails, RTC has power | System clock is restored from the DS3231; sleep schedule works normally. |
+| NTP fails, RTC lost power | Warning printed to Serial; time is unreliable until next successful NTP sync. |
+| RTC disabled (default) | Behaviour unchanged — NTP only. |
 
 ---
 

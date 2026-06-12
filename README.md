@@ -203,6 +203,7 @@ See **[epaper.md](epaper.md)** for full instructions on:
 - Installing required libraries
 - First-boot Wi-Fi setup
 - Web configuration UI reference
+- Optional DS3231 RTC module (keeps the sleep schedule alive without NTP)
 
 ![ePaper Configuration UI](assets/screenshots/esp-config-ui.png)
 
