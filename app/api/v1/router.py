@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from app.core.config import settings
 from app.services import clock, weather as weather_svc, jewish_cal as jewish_cal_svc
 
 router = APIRouter()
@@ -27,6 +28,7 @@ async def home(request: Request) -> HTMLResponse:
             "default_font": clock.DEFAULT_FONT,
             "default_location": "Tel Aviv",
             "default_calendar": "gregorian",
+            "gtag_id": settings.gtag_id,
         },
     )
 
