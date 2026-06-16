@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.v1.router import router
 from app.core.config import settings
@@ -30,6 +31,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.include_router(router)
 
 _APP_DIR = Path(__file__).parent  # = app/
