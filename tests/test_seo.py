@@ -37,7 +37,8 @@ def test_sitemap_root_priority():
 
 def test_sitemap_entry_count():
     root = ET.fromstring(generate_sitemap(BASE))
-    assert len(root.findall("sm:url", _NS)) == 61
+    expected = 1 + len(VALID_FONTS) * len(SITEMAP_LOCATIONS) * 2
+    assert len(root.findall("sm:url", _NS)) == expected
 
 
 def test_sitemap_all_fonts_present():
@@ -96,7 +97,8 @@ def test_sitemap_route_200(client):
 def test_sitemap_route_entry_count(client):
     resp = client.get("/sitemap.xml")
     root = ET.fromstring(resp.text)
-    assert len(root.findall("sm:url", _NS)) == 61
+    expected = 1 + len(VALID_FONTS) * len(SITEMAP_LOCATIONS) * 2
+    assert len(root.findall("sm:url", _NS)) == expected
 
 
 def test_home_has_canonical(client):

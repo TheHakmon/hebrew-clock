@@ -14,6 +14,7 @@ _SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 def generate_robots(base_url: str) -> str:
     return (
         "User-agent: *\n"
+        "Disallow: /api/\n"
         "Allow: /\n"
         f"Sitemap: {base_url}/sitemap.xml\n"
     )
