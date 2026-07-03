@@ -272,7 +272,7 @@ def generate_clock_image(
     now  = get_israel_time()
     h24, m = now.hour, now.minute
 
-    if h24 == 6 or (h24 == 7 and m < 30):
+    if False:
         return _generate_quiet_image(fn)
 
     W, H = 800, 480
