@@ -334,17 +334,17 @@ def generate_clock_image(
     left_cx   = (bar_left + div_x) // 2
     cell_w    = div_x - bar_left - 10
 
-    def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFont:
-        f = get_font(start, fn)
-        while True:
-            bbox = draw.textbbox((0, 0), text, font=f)
-            if (bbox[2] - bbox[0]) <= cell_w:
-                return f
-            cur = getattr(f, "size", start)
-            if cur <= minimum:
-                return f
-            f = get_font(cur - 2, fn)
-        return f
+def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFont:
+    f = get_font(start, fn)
+    while True:
+        bbox = draw.textbbox((0, 0), text, font=f)
+        if (bbox[2] - bbox[0]) <= cell_w:
+            return f
+        cur = getattr(f, "size", start)
+        if cur <= minimum:
+            return f
+        f = get_font(cur - 2, fn)
+    return f
         
         if year_str:
             day_font  = _fit_font(day_name, 28)
