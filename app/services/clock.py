@@ -344,7 +344,8 @@ def generate_clock_image(
             if cur <= minimum:
                 return f
             f = get_font(cur - 2, fn)
-
+        return f
+        
         if year_str:
             day_font  = _fit_font(day_name, 28)
             date_font = _fit_font(date_str, 26)
