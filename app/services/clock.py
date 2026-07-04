@@ -329,10 +329,10 @@ def generate_clock_image(
     if jewish_date and "\n" in jewish_date:
         date_str, year_str = jewish_date.split("\n", 1)
     else:
-        date_str = jewish_date if jewish_date else f"{now.day} {MONTHS_HE[now.month - 1]}"
+        date_str = None
         year_str = None
-    left_cx   = (bar_left + div_x) // 2
-    cell_w    = div_x - bar_left - 10
+    left_cx = (bar_left + div_x) // 2
+    cell_w  = div_x - bar_left - 10
 
     def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFont:
         f = get_font(start, fn)
@@ -345,24 +345,25 @@ def generate_clock_image(
                 return f
             f = get_font(cur - 2, fn)
 
-    if year_str:
-        day_font  = _fit_font(day_name, 28)
-        date_font = _fit_font(date_str, 26)
-        year_font = _fit_font(year_str, 22)
-        draw.text((left_cx, bar_cy - 26), day_name, font=day_font,  fill=0, anchor="mm")
-        draw.text((left_cx, bar_cy),      date_str, font=date_font, fill=0, anchor="mm")
-        draw.text((left_cx, bar_cy + 24), year_str, font=year_font, fill=0, anchor="mm")
+    # ── Left cell: Gregorian date + Hebrew date ──
+    greg_str  = f"{now.day} {MONTHS_HE[now.month - 1]}"
+    greg_font = _fit_font(greg_str, 26)
+    if year_str and date_str:
+        heb_full  = date_str + " " + year_str
+        heb_font  = _fit_font(heb_full, 22)
+        draw.text((left_cx, bar_cy - 14), greg_str, font=greg_font, fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy + 14), heb_full,  font=heb_font,  fill=0, anchor="mm")
     else:
-        date_font = _fit_font(date_str, 34)
-        draw.text((left_cx, bar_cy - 14), day_name, font=font_small, fill=0, anchor="mm")
-        draw.text((left_cx, bar_cy + 14), date_str, font=date_font,  fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy), greg_str, font=greg_font, fill=0, anchor="mm")
 
+    # ── Middle cell: day name + time period ──
     mid_x = (div_x + div_x2) // 2
     if period_line:
-        combined = day_name + " " + period_line
+        combined      = day_name + " " + period_line
         combined_font = _fit_font(combined, 28)
         draw.text((mid_x, bar_cy), combined, font=combined_font, fill=0, anchor="mm")
 
+    # ── Right cell: weather ──
     if weather:
         right_start = div_x2
         right_end   = W - PAD2 - 8
