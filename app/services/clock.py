@@ -334,35 +334,34 @@ def generate_clock_image(
     left_cx   = (bar_left + div_x) // 2
     cell_w    = div_x - bar_left - 10
 
-def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFont:
-    f = get_font(start, fn)
-    while True:
-        bbox = draw.textbbox((0, 0), text, font=f)
-        if (bbox[2] - bbox[0]) <= cell_w:
-            return f
-        cur = getattr(f, "size", start)
-        if cur <= minimum:
-            return f
-        f = get_font(cur - 2, fn)
-    return f
-        
-        if year_str:
-            day_font  = _fit_font(day_name, 28)
-            date_font = _fit_font(date_str, 26)
-            year_font = _fit_font(year_str, 22)
-            draw.text((left_cx, bar_cy - 26), day_name, font=day_font,  fill=0, anchor="mm")
-            draw.text((left_cx, bar_cy),      date_str, font=date_font, fill=0, anchor="mm")
-            draw.text((left_cx, bar_cy + 24), year_str, font=year_font, fill=0, anchor="mm")
-        else:
-            date_font = _fit_font(date_str, 34)
-            draw.text((left_cx, bar_cy - 14), day_name, font=font_small, fill=0, anchor="mm")
-            draw.text((left_cx, bar_cy + 14), date_str, font=date_font,  fill=0, anchor="mm")
+    def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFont:
+        f = get_font(start, fn)
+        while True:
+            bbox = draw.textbbox((0, 0), text, font=f)
+            if (bbox[2] - bbox[0]) <= cell_w:
+                return f
+            cur = getattr(f, "size", start)
+            if cur <= minimum:
+                return f
+            f = get_font(cur - 2, fn)
 
-        mid_x = (div_x + div_x2) // 2
-        if period_line:
-            combined = day_name + " " + period_line
-            combined_font = _fit_font(combined, 28)
-            draw.text((mid_x, bar_cy), combined, font=combined_font, fill=0, anchor="mm")
+    if year_str:
+        day_font  = _fit_font(day_name, 28)
+        date_font = _fit_font(date_str, 26)
+        year_font = _fit_font(year_str, 22)
+        draw.text((left_cx, bar_cy - 26), day_name, font=day_font,  fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy),      date_str, font=date_font, fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy + 24), year_str, font=year_font, fill=0, anchor="mm")
+    else:
+        date_font = _fit_font(date_str, 34)
+        draw.text((left_cx, bar_cy - 14), day_name, font=font_small, fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy + 14), date_str, font=date_font,  fill=0, anchor="mm")
+
+    mid_x = (div_x + div_x2) // 2
+    if period_line:
+        combined = day_name + " " + period_line
+        combined_font = _fit_font(combined, 28)
+        draw.text((mid_x, bar_cy), combined, font=combined_font, fill=0, anchor="mm")
 
     if weather:
         right_start = div_x2
@@ -376,7 +375,6 @@ def _fit_font(text: str, start: int, minimum: int = 18) -> ImageFont.FreeTypeFon
                   font=font_small, fill=0, anchor="mm")
 
     return _png_bytes(img)
-
 
 def log_available_fonts() -> None:
     found = [f for f in VALID_FONTS
