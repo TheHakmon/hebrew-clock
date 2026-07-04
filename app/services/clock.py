@@ -346,13 +346,16 @@ def generate_clock_image(
             f = get_font(cur - 2, fn)
 
         if year_str:
+            day_font  = _fit_font(day_name, 28)
             date_font = _fit_font(date_str, 26)
             year_font = _fit_font(year_str, 22)
-            draw.text((left_cx, bar_cy - 12), date_str, font=date_font, fill=0, anchor="mm")
-            draw.text((left_cx, bar_cy + 14), year_str, font=year_font, fill=0, anchor="mm")
+            draw.text((left_cx, bar_cy - 26), day_name, font=day_font,  fill=0, anchor="mm")
+            draw.text((left_cx, bar_cy),      date_str, font=date_font, fill=0, anchor="mm")
+            draw.text((left_cx, bar_cy + 24), year_str, font=year_font, fill=0, anchor="mm")
         else:
             date_font = _fit_font(date_str, 34)
-            draw.text((left_cx, bar_cy), date_str, font=date_font, fill=0, anchor="mm")
+            draw.text((left_cx, bar_cy - 14), day_name, font=font_small, fill=0, anchor="mm")
+            draw.text((left_cx, bar_cy + 14), date_str, font=date_font,  fill=0, anchor="mm")
 
         mid_x = (div_x + div_x2) // 2
         if period_line:
