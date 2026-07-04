@@ -376,6 +376,7 @@ def generate_clock_image(
 
     return _png_bytes(img)
 
+
 def log_available_fonts() -> None:
     found = [f for f in VALID_FONTS
              if (settings.font_dir / f"{f}.ttf").exists()]
