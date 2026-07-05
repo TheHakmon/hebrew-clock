@@ -258,6 +258,35 @@ def _generate_quiet_image(font_name: str) -> bytes:
     return _png_bytes(img)
 
 
+
+# ── Special dates ─────────────────────────────────────
+
+SPECIAL_DATES = {
+    (5, 7): ("מזל טוב", "לבדיקה", None),
+}
+
+def _get_special_event(dt: datetime.datetime):
+    """Return (line1, line2, age_or_none) if today is a special date, else None."""
+    key = (dt.day, dt.month)
+    if key in SPECIAL_DATES:
+        return SPECIAL_DATES[key]
+    return None
+
+
+def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
+    W, H = 800, 480
+    img  = Image.new("L", (W, H), color=255)
+    draw = ImageDraw.Draw(img)
+    PAD1, PAD2 = 8, 16
+    draw.rectangle([PAD1, PAD1, W - PAD1, H - PAD1], outline=0, width=3)
+    draw.rectangle([PAD2, PAD2, W - PAD2, H - PAD2], outline=0, width=1)
+    draw.text((W // 2, H // 2 - 70), line1,
+              font=get_font(90, font_name), fill=0, anchor="mm")
+    draw.text((W // 2, H // 2 + 40), line2,
+              font=get_font(50, font_name), fill=0, anchor="mm")
+    return _png_bytes(img)
+
+
 def generate_clock_image(
     font_name:   str        = DEFAULT_FONT,
     sleep_time:  bool       = False,
@@ -272,8 +301,9 @@ def generate_clock_image(
     now  = get_israel_time()
     h24, m = now.hour, now.minute
 
-    if False:
-        return _generate_quiet_image(fn)
+    special = _get_special_event(now)
+    if special:
+        return _generate_special_image(fn, special[0], special[1])
 
     W, H = 800, 480
     img  = Image.new("L", (W, H), color=255)
