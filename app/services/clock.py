@@ -280,10 +280,22 @@ def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
     PAD1, PAD2 = 8, 16
     draw.rectangle([PAD1, PAD1, W - PAD1, H - PAD1], outline=0, width=3)
     draw.rectangle([PAD2, PAD2, W - PAD2, H - PAD2], outline=0, width=1)
-    draw.text((W // 2, H // 2 - 70), line1,
-              font=get_font(90, font_name), fill=0, anchor="mm")
-    draw.text((W // 2, H // 2 + 40), line2,
-              font=get_font(50, font_name), fill=0, anchor="mm")
+
+    def fit(text: str, start: int) -> ImageFont.FreeTypeFont:
+        f = get_font(start, font_name)
+        while True:
+            bbox = draw.textbbox((0, 0), text, font=f)
+            if (bbox[2] - bbox[0]) < (W - 40):
+                return f
+            cur = getattr(f, "size", start)
+            if cur <= 30:
+                return f
+            f = get_font(cur - 4, font_name)
+
+    f1 = fit(line1, 160)
+    f2 = fit(line2, 100)
+    draw.text((W // 2, H // 2 - 90), line1, font=f1, fill=0, anchor="mm")
+    draw.text((W // 2, H // 2 + 80), line2, font=f2, fill=0, anchor="mm")
     return _png_bytes(img)
 
 
