@@ -262,20 +262,23 @@ def _generate_quiet_image(font_name: str) -> bytes:
 # ── Special dates ─────────────────────────────────────
 
 SPECIAL_DATES = {
-    (5, 7): ("מזל טוב סהר", None),
+    (5, 7): ("מזל טוב רונית", "את מושלמת!"),
     (23, 1): ("מזל טוב סהר", 2017),
     (23, 6): ("מזל טוב ארד", 2022),
+    (25, 11): ("מזל טוב רונית", "את מושלמת!"),
 }
 
 def _get_special_event(dt: datetime.datetime):
     """Return (line1, line2) if today is a special date, else None."""
     key = (dt.day, dt.month)
     if key in SPECIAL_DATES:
-        name_line, birth_year = SPECIAL_DATES[key]
-        if birth_year is None:
-            return (name_line, "יום הולדת 10!")
-        age = dt.year - birth_year
-        return (name_line, f"יום הולדת ה-{age}!")
+        entry = SPECIAL_DATES[key]
+        name_line, second = entry
+        if isinstance(second, int):
+            age = dt.year - second
+            return (name_line, f"יום הולדת ה-{age}!")
+        else:
+            return (name_line, second)
     return None
 
 
