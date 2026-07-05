@@ -346,7 +346,7 @@ def generate_clock_image(
             f = get_font(cur - 2, fn)
 
     # ── Left cell: Gregorian date + Hebrew date ──
-    greg_str  = f"{now.day} {MONTHS_HE[now.month - 1]}"
+    greg_str  = f"{now.day} {MONTHS_HE[now.month - 1]} {now.year}"
     greg_font = _fit_font(greg_str, 26)
     if year_str and date_str:
         heb_full  = date_str + " " + year_str
