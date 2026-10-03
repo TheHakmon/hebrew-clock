@@ -411,12 +411,13 @@ void setup() {
                        "Then open:   " + ip);
     });
 
-    wm.resetSettings();
-    if (!wm.autoConnect("EPaper-Setup")) {
-        Serial.println("WiFi failed — restarting");
-        ESP.restart();
-    }
-    Serial.print("WiFi connected, IP: ");
+// FIX: Removed wm.resetSettings() - it was wiping WiFi credentials on every boot!
+        // On WiFi failure, open config portal instead of restarting (avoids double-reset detection)
+        wm.setConfigPortalTimeout(180);
+        if (!wm.autoConnect("EPaper-Setup")) {
+                    Serial.println("WiFi failed - starting config portal for 3 minutes");
+                    wm.startConfigPortal("EPaper-Setup");
+        }Serial.print("WiFi connected, IP: ");
     Serial.println(WiFi.localIP());
 
     showTextScreen("Connected", WiFi.localIP().toString());
