@@ -417,7 +417,15 @@ void setup() {
         if (!wm.autoConnect("EPaper-Setup")) {
                     Serial.println("WiFi failed - starting config portal for 3 minutes");
                     wm.startConfigPortal("EPaper-Setup");
-        }Serial.print("WiFi connected, IP: ");
+        } else {
+            // WiFi connected — check for DHCP failure (0.0.0.0 IP)
+            if (WiFi.localIP() == IPAddress(0, 0, 0, 0)) {
+                Serial.println("Got 0.0.0.0 IP - restarting to retry DHCP");
+                delay(1000);
+                ESP.restart();
+            }
+        }
+    Serial.print("WiFi connected, IP: ");
     Serial.println(WiFi.localIP());
 
     showTextScreen("Connected", WiFi.localIP().toString());
