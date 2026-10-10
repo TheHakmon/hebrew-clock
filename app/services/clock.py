@@ -365,7 +365,7 @@ def generate_clock_image(
             f = get_font(current_size - 6, fn)
         draw.text((W // 2, ty + i * line_h), line, font=f, fill=0, anchor="mm")
 
-    sep_y = H - 105
+    sep_y = H - 120
     draw.line([(PAD2 + 8, sep_y), (W - PAD2 - 8, sep_y)], fill=0, width=1)
     bar_cy    = H - 52
     bar_left  = PAD2 + 8
@@ -398,12 +398,12 @@ def generate_clock_image(
 
     # ── Left cell: Gregorian date + Hebrew date ──
     greg_str  = f"{now.day} {MONTHS_HE[now.month - 1]} {now.year}"
-    greg_font = _fit_font(greg_str, 26)
+    greg_font = _fit_font(greg_str, 34)
     if year_str and date_str:
         heb_full  = date_str + " " + year_str
-        heb_font  = _fit_font(heb_full, 22)
-        draw.text((left_cx, bar_cy - 14), greg_str, font=greg_font, fill=0, anchor="mm")
-        draw.text((left_cx, bar_cy + 14), heb_full,  font=heb_font,  fill=0, anchor="mm")
+        heb_font  = _fit_font(heb_full, 28)
+        draw.text((left_cx, bar_cy - 18), greg_str, font=greg_font, fill=0, anchor="mm")
+        draw.text((left_cx, bar_cy + 18), heb_full,  font=heb_font,  fill=0, anchor="mm")
     else:
         draw.text((left_cx, bar_cy), greg_str, font=greg_font, fill=0, anchor="mm")
 
@@ -411,7 +411,7 @@ def generate_clock_image(
     mid_x = (div_x + div_x2) // 2
     if period_line:
         combined      = day_name + " " + period_line
-        combined_font = _fit_font(combined, 28)
+        combined_font = _fit_font(combined, 36)
         draw.text((mid_x, bar_cy), combined, font=combined_font, fill=0, anchor="mm")
 
     # ── Right cell: countdown to next holiday (or custom event) ──
@@ -441,10 +441,10 @@ def generate_clock_image(
         else:
             days_str = f"עוֹד {countdown_days} יָמִים"
 
-        label_font = _fit_right(countdown_label, 28)
-        days_font  = _fit_right(days_str, 24)
-        draw.text((right_cx, bar_cy - 14), countdown_label, font=label_font, fill=0, anchor="mm")
-        draw.text((right_cx, bar_cy + 14), days_str,        font=days_font,  fill=0, anchor="mm")
+        label_font = _fit_right(countdown_label, 34)
+        days_font  = _fit_right(days_str, 30)
+        draw.text((right_cx, bar_cy - 18), countdown_label, font=label_font, fill=0, anchor="mm")
+        draw.text((right_cx, bar_cy + 18), days_str,        font=days_font,  fill=0, anchor="mm")
 
     return _png_bytes(img)
 

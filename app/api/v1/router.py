@@ -88,10 +88,9 @@ async def get_clock(
         else:
             c_label, c_days = None, None
 
-    jdate = None
-    if calendar == "jewish":
-        today = clock.get_israel_time().date()
-        jdate = await jewish_cal_svc.get_jewish_date(today, request.app.state.http_client)
+    # Always show Hebrew date alongside Gregorian
+    today = clock.get_israel_time().date()
+    jdate = await jewish_cal_svc.get_jewish_date(today, request.app.state.http_client)
 
     img_bytes = await run_in_threadpool(
         clock.generate_clock_image,
