@@ -308,10 +308,11 @@ def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
 
 
 def generate_clock_image(
-    font_name:   str        = DEFAULT_FONT,
-    sleep_time:  bool       = False,
-    weather:     dict | None = None,
-    jewish_date: str | None  = None,
+    font_name:       str        = DEFAULT_FONT,
+    sleep_time:      bool       = False,
+    jewish_date:     str | None = None,
+    countdown_label: str | None = None,
+    countdown_days:  int | None = None,
 ) -> bytes:
     fn = font_name if font_name in VALID_FONTS else DEFAULT_FONT
 
@@ -413,17 +414,37 @@ def generate_clock_image(
         combined_font = _fit_font(combined, 28)
         draw.text((mid_x, bar_cy), combined, font=combined_font, fill=0, anchor="mm")
 
-    # ── Right cell: weather ──
-    if weather:
+    # ── Right cell: countdown to next holiday (or custom event) ──
+    if countdown_label is not None and countdown_days is not None:
         right_start = div_x2
         right_end   = W - PAD2 - 8
-        icon_x      = right_start + (right_end - right_start) // 4
-        text_x      = right_start + 3 * (right_end - right_start) // 4
-        _draw_weather_icon(draw, icon_x, bar_cy, weather.get("icon_key", "cloud"), size=34)
-        draw.text((text_x, bar_cy - 14), f"{weather['temp']}°",
-                  font=get_font(40, fn), fill=0, anchor="mm")
-        draw.text((text_x, bar_cy + 16), weather.get("desc", ""),
-                  font=font_small, fill=0, anchor="mm")
+        right_cx    = (right_start + right_end) // 2
+        right_cell_w = right_end - right_start - 10
+
+        def _fit_right(text: str, start: int, minimum: int = 16) -> ImageFont.FreeTypeFont:
+            f = get_font(start, fn)
+            while True:
+                bbox = draw.textbbox((0, 0), text, font=f)
+                if (bbox[2] - bbox[0]) <= right_cell_w:
+                    return f
+                cur = getattr(f, "size", start)
+                if cur <= minimum:
+                    return f
+                f = get_font(cur - 2, fn)
+
+        if countdown_days == 0:
+            days_str = "הַיּוֹם!"
+        elif countdown_days == 1:
+            days_str = "מָחָר"
+        elif countdown_days == 2:
+            days_str = "עוֹד יוֹמַיִם"
+        else:
+            days_str = f"עוֹד {countdown_days} יָמִים"
+
+        label_font = _fit_right(countdown_label, 28)
+        days_font  = _fit_right(days_str, 24)
+        draw.text((right_cx, bar_cy - 14), countdown_label, font=label_font, fill=0, anchor="mm")
+        draw.text((right_cx, bar_cy + 14), days_str,        font=days_font,  fill=0, anchor="mm")
 
     return _png_bytes(img)
 
