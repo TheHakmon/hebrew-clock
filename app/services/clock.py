@@ -367,14 +367,14 @@ def generate_clock_image(
 
     sep_y = H - 120
     draw.line([(PAD2 + 8, sep_y), (W - PAD2 - 8, sep_y)], fill=0, width=1)
-    bar_cy    = H - 52
+    bar_cy    = sep_y + (H - 15 - sep_y) // 2
     bar_left  = PAD2 + 8
     bar_right = W - PAD2 - 8
     bar_width = bar_right - bar_left
     div_x     = bar_left + bar_width // 3
     div_x2    = bar_left + 2 * bar_width // 3
-    draw.line([(div_x,  H - 92), (div_x,  H - 15)], fill=0, width=1)
-    draw.line([(div_x2, H - 92), (div_x2, H - 15)], fill=0, width=1)
+    draw.line([(div_x,  sep_y), (div_x,  H - 15)], fill=0, width=1)
+    draw.line([(div_x2, sep_y), (div_x2, H - 15)], fill=0, width=1)
 
     day_name  = DAYS_HE[now.weekday()]
     if jewish_date and "\n" in jewish_date:
