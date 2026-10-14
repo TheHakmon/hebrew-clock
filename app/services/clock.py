@@ -264,16 +264,18 @@ def _generate_quiet_image(font_name: str) -> bytes:
 SPECIAL_DATES = {
     (23, 1): ("מזל טוב סהר", 2017),
     (23, 6): ("מזל טוב ארד", 2022),
-    (25, 11): ("מזל טוב רונית", "את מושלמת!"),
+    (25, 11): ("מַזָּל טוֹב רוֹנִית", "HEART", "אַתְּ מֻשְׁלֶמֶת!"),
     (1, 12): ("יוֹם נִישׂוּאִין שָׂמֵחַ", "HEART"),
-    (14, 10): ("מזל טוב רונית", "HEART"),  # TEMP TEST
+    (14, 10): ("מַזָּל טוֹב רוֹנִית", "HEART", "אַתְּ מֻשְׁלֶמֶת!"),  # TEMP TEST
 }
 
 def _get_special_event(dt: datetime.datetime):
-    """Return (line1, line2) if today is a special date, else None."""
+    """Return (line1, line2) or (line1, line2, line3) if today is a special date, else None."""
     key = (dt.day, dt.month)
     if key in SPECIAL_DATES:
         entry = SPECIAL_DATES[key]
+        if len(entry) == 3:
+            return entry  # (line1, line2, line3)
         name_line, second = entry
         if isinstance(second, int):
             age = dt.year - second
@@ -283,7 +285,7 @@ def _get_special_event(dt: datetime.datetime):
     return None
 
 
-def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
+def _generate_special_image(font_name: str, line1: str, line2: str, line3: str | None = None) -> bytes:
     W, H = 800, 480
     img  = Image.new("L", (W, H), color=255)
     draw = ImageDraw.Draw(img)
@@ -313,12 +315,19 @@ def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
         draw.polygon(pts, fill=0)
 
     f1 = fit(line1, 160)
-    draw.text((W // 2, H // 2 - 90), line1, font=f1, fill=0, anchor="mm")
-    if line2 == "HEART":
-        _draw_heart(W // 2, H // 2 + 90, 70)
+    if line3 is not None:
+        # 3-part layout: line1 top, HEART middle, line3 bottom
+        draw.text((W // 2, H // 2 - 130), line1, font=f1, fill=0, anchor="mm")
+        _draw_heart(W // 2, H // 2 - 20, 55)
+        f3 = fit(line3, 80)
+        draw.text((W // 2, H // 2 + 110), line3, font=f3, fill=0, anchor="mm")
     else:
-        f2 = fit(line2, 100)
-        draw.text((W // 2, H // 2 + 80), line2, font=f2, fill=0, anchor="mm")
+        draw.text((W // 2, H // 2 - 90), line1, font=f1, fill=0, anchor="mm")
+        if line2 == "HEART":
+            _draw_heart(W // 2, H // 2 + 90, 70)
+        else:
+            f2 = fit(line2, 100)
+            draw.text((W // 2, H // 2 + 80), line2, font=f2, fill=0, anchor="mm")
     return _png_bytes(img)
 
 
@@ -339,7 +348,7 @@ def generate_clock_image(
 
     special = _get_special_event(now)
     if special:
-        return _generate_special_image(fn, special[0], special[1])
+        return _generate_special_image(fn, special[0], special[1], special[2] if len(special) == 3 else None)
 
     W, H = 800, 480
     img  = Image.new("L", (W, H), color=255)
