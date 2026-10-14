@@ -318,9 +318,9 @@ def _generate_special_image(font_name: str, line1: str, line2: str, line3: str |
     if line3 is not None:
         # 3-part layout: line1 top, HEART middle, line3 bottom
         draw.text((W // 2, H // 2 - 130), line1, font=f1, fill=0, anchor="mm")
-        _draw_heart(W // 2, H // 2 - 20, 55)
+        _draw_heart(W // 2, H // 2 + 10, 55)
         f3 = fit(line3, 80)
-        draw.text((W // 2, H // 2 + 110), line3, font=f3, fill=0, anchor="mm")
+        draw.text((W // 2, H // 2 + 140), line3, font=f3, fill=0, anchor="mm")
     else:
         draw.text((W // 2, H // 2 - 90), line1, font=f1, fill=0, anchor="mm")
         if line2 == "HEART":
