@@ -265,8 +265,8 @@ SPECIAL_DATES = {
     (23, 1): ("מזל טוב סהר", 2017),
     (23, 6): ("מזל טוב ארד", 2022),
     (25, 11): ("מזל טוב רונית", "את מושלמת!"),
-    (1, 12): ("יוֹם נִישׂוּאִין שָׂמֵחַ", "את מושלמת!"),
-    (14, 10): ("יוֹם נִישׂוּאִין שָׂמֵחַ", "את מושלמת!"),  # TEMP TEST
+    (1, 12): ("יוֹם נִישׂוּאִין שָׂמֵחַ", "HEART"),
+    (14, 10): ("יוֹם נִישׂוּאִין שָׂמֵחַ", "HEART"),  # TEMP TEST
 }
 
 def _get_special_event(dt: datetime.datetime):
@@ -302,10 +302,23 @@ def _generate_special_image(font_name: str, line1: str, line2: str) -> bytes:
                 return f
             f = get_font(cur - 4, font_name)
 
+    import math as _math
+    def _draw_heart(cx, cy, size):
+        pts = []
+        for i in range(360):
+            t = _math.radians(i)
+            x = 16 * _math.sin(t)**3
+            y = -(13 * _math.cos(t) - 5 * _math.cos(2*t) - 2 * _math.cos(3*t) - _math.cos(4*t))
+            pts.append((cx + x * size / 16, cy + y * size / 16))
+        draw.polygon(pts, fill=0)
+
     f1 = fit(line1, 160)
-    f2 = fit(line2, 100)
     draw.text((W // 2, H // 2 - 90), line1, font=f1, fill=0, anchor="mm")
-    draw.text((W // 2, H // 2 + 80), line2, font=f2, fill=0, anchor="mm")
+    if line2 == "HEART":
+        _draw_heart(W // 2, H // 2 + 90, 70)
+    else:
+        f2 = fit(line2, 100)
+        draw.text((W // 2, H // 2 + 80), line2, font=f2, fill=0, anchor="mm")
     return _png_bytes(img)
 
 
