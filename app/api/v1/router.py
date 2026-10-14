@@ -88,7 +88,7 @@ async def get_clock(
         _trip_end   = _dt.date(2027, 2, 5)
         if _today < _trip_start:
             _days_to_trip = (_trip_start - _today).days
-            c_label: str | None = "Snowboarding ✈"
+            c_label: str | None = "חופשת סנובורד"
             c_days:  int | None = _days_to_trip
         elif _today <= _trip_end:
             # currently on the trip — show nothing special, fall through to holidays
