@@ -441,7 +441,23 @@ def generate_clock_image(
         else:
             days_str = f"עוֹד {countdown_days} יָמִים"
 
-        label_font = _fit_right(countdown_label, 34)
+        # Use Latin font for labels that contain non-Hebrew chars (e.g. "Snowboarding ✈")
+        _has_latin = any(c.isascii() and c.isalpha() for c in countdown_label)
+        if _has_latin:
+            _latin_font_path = settings.font_dir / "OpenSans-VariableFont_wdth,wght.ttf"
+            def _fit_latin(text: str, start: int, minimum: int = 14) -> ImageFont.FreeTypeFont:
+                f = ImageFont.truetype(str(_latin_font_path), start)
+                while True:
+                    bbox = draw.textbbox((0, 0), text, font=f)
+                    if (bbox[2] - bbox[0]) <= right_cell_w:
+                        return f
+                    cur = f.size if hasattr(f, 'size') else start
+                    if cur <= minimum:
+                        return f
+                    f = ImageFont.truetype(str(_latin_font_path), cur - 2)
+            label_font = _fit_latin(countdown_label, 28)
+        else:
+            label_font = _fit_right(countdown_label, 34)
         days_font  = _fit_right(days_str, 30)
         draw.text((right_cx, bar_cy - 18), countdown_label, font=label_font, fill=0, anchor="mm")
         draw.text((right_cx, bar_cy + 18), days_str,        font=days_font,  fill=0, anchor="mm")
