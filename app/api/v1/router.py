@@ -81,12 +81,30 @@ async def get_clock(
         c_label: str | None = countdown_label
         c_days:  int | None = countdown_days
     else:
-        # Auto-fetch next Jewish holiday from Hebcal
-        holiday = await holidays_svc.get_next_holiday(request.app.state.http_client)
-        if holiday:
-            c_label, c_days = holiday
+        # Personal trip override: show ski trip until it ends (Feb 5 2027)
+        import datetime as _dt
+        _today = clock.get_israel_time().date()
+        _trip_start = _dt.date(2027, 1, 29)
+        _trip_end   = _dt.date(2027, 2, 5)
+        if _today < _trip_start:
+            _days_to_trip = (_trip_start - _today).days
+            c_label: str | None = "✈️ מאירהופן"
+            c_days:  int | None = _days_to_trip
+        elif _today <= _trip_end:
+            # currently on the trip — show nothing special, fall through to holidays
+            c_label = None
+            c_days  = None
         else:
-            c_label, c_days = None, None
+            c_label = None
+            c_days  = None
+
+        if c_label is None:
+            # Auto-fetch next Jewish holiday from Hebcal
+            holiday = await holidays_svc.get_next_holiday(request.app.state.http_client)
+            if holiday:
+                c_label, c_days = holiday
+            else:
+                c_label, c_days = None, None
 
     # Always show Hebrew date alongside Gregorian
     today = clock.get_israel_time().date()
