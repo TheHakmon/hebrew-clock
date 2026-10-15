@@ -74,6 +74,7 @@ async def get_clock(
     calendar:        str = Query(default="gregorian"),
     countdown_label: str = Query(default=""),   # override: custom event name
     countdown_days:  int = Query(default=-1),   # override: days until custom event (-1 = auto)
+    public:          bool = Query(default=False),  # website version: hide birthdays/anniversary & personal trip
 ) -> Response:
     # Determine countdown source
     if countdown_label and countdown_days >= 0:
@@ -86,7 +87,10 @@ async def get_clock(
         _today = clock.get_israel_time().date()
         _trip_start = _dt.date(2027, 1, 29)
         _trip_end   = _dt.date(2027, 2, 5)
-        if _today < _trip_start:
+        if public:
+            c_label = None
+            c_days  = None
+        elif _today < _trip_start:
             _days_to_trip = (_trip_start - _today).days
             c_label: str | None = "חופשת סנובורד"
             c_days:  int | None = _days_to_trip
@@ -117,6 +121,7 @@ async def get_clock(
         jewish_date     = jdate,
         countdown_label = c_label,
         countdown_days  = c_days,
+        hide_personal   = public,
     )
     return Response(
         content=img_bytes,

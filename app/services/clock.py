@@ -336,6 +336,7 @@ def generate_clock_image(
     jewish_date:     str | None = None,
     countdown_label: str | None = None,
     countdown_days:  int | None = None,
+    hide_personal:   bool       = False,
 ) -> bytes:
     fn = font_name if font_name in VALID_FONTS else DEFAULT_FONT
 
@@ -345,7 +346,7 @@ def generate_clock_image(
     now  = get_israel_time()
     h24, m = now.hour, now.minute
 
-    special = _get_special_event(now)
+    special = None if hide_personal else _get_special_event(now)
     if special:
         return _generate_special_image(fn, special[0], special[1], special[2] if len(special) == 3 else None)
 
