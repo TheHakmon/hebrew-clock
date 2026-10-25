@@ -64,8 +64,8 @@ DAYS_HE = [
 # ── Helpers ───────────────────────────────────────────
 
 def get_israel_time() -> datetime.datetime:
-    utc = datetime.datetime.utcnow()
-    local = utc + datetime.timedelta(hours=3 if 3 <= utc.month <= 10 else 2)
+    from zoneinfo import ZoneInfo
+    local = datetime.datetime.now(ZoneInfo("Asia/Jerusalem")).replace(tzinfo=None)
     return local + datetime.timedelta(seconds=settings.display_lag)
 
 
