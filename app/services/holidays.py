@@ -2,37 +2,39 @@
 import datetime
 import httpx
 from loguru import logger
+from app.services import clock as _clock
 
 _CACHE_TTL = 3600 * 6  # refresh every 6 hours
+_BACKOFF_TTL = 600      # 10 min backoff after Hebcal failure
 
-# Nikud mapping for major holidays
+# Nikud mapping — longer/more-specific keys MUST come before their prefix
 HOLIDAYS_NIKUD: dict[str, str] = {
-    "Rosh Hashana":       "רֹאשׁ הַשָּׁנָה",
     "Rosh Hashana II":    "רֹאשׁ הַשָּׁנָה ב׳",
+    "Rosh Hashana":       "רֹאשׁ הַשָּׁנָה",
     "Yom Kippur":         "יוֹם כִּיפּוּר",
-    "Sukkot":             "סֻכּוֹת",
     "Sukkot II":          "סֻכּוֹת ב׳",
+    "Sukkot":             "סֻכּוֹת",
     "Shmini Atzeret":     "שְׁמִינִי עֲצֶרֶת",
     "Simchat Torah":      "שִׂמְחַת תּוֹרָה",
     "Chanukah":           "חֲנֻכָּה",
     "Tu BiShvat":         "ט\"וּ בִּשְׁבָט",
     "Purim":              "פּוּרִים",
     "Shushan Purim":      "שׁוּשַׁן פּוּרִים",
-    "Pesach":             "פֶּסַח",
-    "Pesach II":          "פֶּסַח ב׳",
     "Pesach Sheni":       "פֶּסַח שֵׁנִי",
+    "Pesach II":          "פֶּסַח ב׳",
+    "Pesach":             "פֶּסַח",
     "Lag BaOmer":         "לַ\"ג בָּעֹמֶר",
-    "Shavuot":            "שָׁבוּעוֹת",
     "Shavuot II":         "שָׁבוּעוֹת ב׳",
+    "Shavuot":            "שָׁבוּעוֹת",
     "Tish'a B'Av":        "תִּשְׁעָה בְּאָב",
     "Yom HaShoah":        "יוֹם הַשּׁוֹאָה",
     "Yom HaZikaron":      "יוֹם הַזִּכָּרוֹן",
+    "Yom HaAtzma'ut":     "יוֹם הָעַצְמָאוּת",   # Hebcal spelling
     "Yom HaAtzmaut":      "יוֹם הָעַצְמָאוּת",
     "Yom Yerushalayim":   "יוֹם יְרוּשָׁלַיִם",
     "Rosh Chodesh":       "רֹאשׁ חֹדֶשׁ",
 }
 
-# Days-until text with nikud
 def days_text(n: int) -> str:
     if n == 0:
         return "הַיּוֹם!"
@@ -47,55 +49,73 @@ _cache: dict[str, object] = {}
 
 
 def _nikud_for(title: str) -> str | None:
-    """Find nikud for a holiday title (handles prefix matches)."""
-    for key, nikud in HOLIDAYS_NIKUD.items():
-        if title == key or title.startswith(key + ":") or title.startswith(key + " "):
-            return nikud
-        if key == title.split(":")[0].strip():
-            return nikud
-    # Chanukah variations like "Chanukah: 1 Candle" → חֲנֻכָּה
+    """Exact match first, then longest-prefix match — avoids masking second-day holidays."""
+    # 1. Exact match
+    if title in HOLIDAYS_NIKUD:
+        return HOLIDAYS_NIKUD[title]
+    # 2. Chanukah variations like "Chanukah: 1 Candle"
     if "Chanukah" in title:
         return HOLIDAYS_NIKUD["Chanukah"]
-    return None
+    # 3. Prefix match (longest key wins)
+    best_key, best_nikud = "", None
+    for key, nikud in HOLIDAYS_NIKUD.items():
+        if (title.startswith(key + ":") or title.startswith(key + " ")) and len(key) > len(best_key):
+            best_key, best_nikud = key, nikud
+    return best_nikud
 
 
 async def get_next_holiday(client: httpx.AsyncClient) -> tuple[str, int] | None:
     """
-    Return (holiday_name_with_nikud, days_until_as_int) for the next major holiday,
+    Return (holiday_name_with_nikud, days_until) for the next major holiday,
     or None if unavailable.
     """
+    # Use Israel date to match the clock display
+    today = _clock.get_israel_time().date()
+
+    # Check cache (stores holiday date, not raw day count, so it stays accurate past midnight)
     entry = _cache.get("next")
     if entry and isinstance(entry, dict):
         cached_at = entry.get("time")
+        cached_date = entry.get("holiday_date")
         if cached_at and (datetime.datetime.utcnow() - cached_at).total_seconds() < _CACHE_TTL:
-            return entry.get("data")
+            if cached_date and cached_date >= today:
+                n_days = (cached_date - today).days
+                return (entry["nikud"], n_days)
+            # cached holiday has passed — fall through to re-fetch
 
-    today = datetime.date.today()
+    # Backoff: don't hammer Hebcal after a failure
+    backoff = _cache.get("backoff")
+    if backoff and (datetime.datetime.utcnow() - backoff).total_seconds() < _BACKOFF_TTL:
+        # Return stale data if any, else None
+        if entry and isinstance(entry, dict) and entry.get("holiday_date"):
+            n_days = (entry["holiday_date"] - today).days
+            if n_days >= 0:
+                return (entry["nikud"], n_days)
+        return None
+
     all_items: list[dict] = []
 
     try:
-        # Fetch current month + next 5 months to always find something upcoming
-        for delta_months in range(6):
-            ref = today + datetime.timedelta(days=delta_months * 30)
-            url = (
-                "https://www.hebcal.com/hebcal"
-                f"?v=1&cfg=json&maj=on&min=off&nx=off&ss=off&mf=off&c=off"
-                f"&geo=IL&i=on&year={ref.year}&month={ref.month}"
-            )
-            resp = await client.get(url, timeout=10)
-            resp.raise_for_status()
-            all_items.extend(resp.json().get("items", []))
+        # Single range request: today → +200 days (avoids month-skip bug and reduces round-trips)
+        end_date = today + datetime.timedelta(days=200)
+        url = (
+            "https://www.hebcal.com/hebcal"
+            f"?v=1&cfg=json&maj=on&min=on&mod=on&nx=off&ss=off&mf=off&c=off"
+            f"&geo=IL&i=on"
+            f"&start={today.isoformat()}&end={end_date.isoformat()}"
+        )
+        resp = await client.get(url, timeout=8)
+        resp.raise_for_status()
+        all_items = resp.json().get("items", [])
 
-        # Sort by date ascending, find first holiday >= today
         all_items.sort(key=lambda x: x.get("date", ""))
-        seen: set[str] = set()  # deduplicate across month boundaries
 
         for item in all_items:
             if item.get("category") != "holiday":
                 continue
             title = item.get("title", "")
-            date_str = item.get("date", "")[:10]  # "YYYY-MM-DD"
-            if not date_str or date_str in seen:
+            date_str = item.get("date", "")[:10]
+            if not date_str:
                 continue
             try:
                 holiday_date = datetime.date.fromisoformat(date_str)
@@ -106,21 +126,27 @@ async def get_next_holiday(client: httpx.AsyncClient) -> tuple[str, int] | None:
 
             nikud = _nikud_for(title)
             if nikud is None:
-                continue  # skip holidays not in our list
+                continue
 
-            seen.add(date_str)
             n_days = (holiday_date - today).days
-            result: tuple[str, int] = (nikud, n_days)
-            _cache["next"] = {"data": result, "time": datetime.datetime.utcnow()}
+            _cache["next"] = {
+                "nikud": nikud,
+                "holiday_date": holiday_date,
+                "time": datetime.datetime.utcnow(),
+            }
+            _cache.pop("backoff", None)
             logger.info("next holiday: {} in {} days ({})", nikud, n_days, date_str)
-            return result
+            return (nikud, n_days)
 
-        logger.warning("no upcoming holiday found in next 6 months")
+        logger.warning("no upcoming holiday found in next 200 days")
         return None
 
     except Exception as exc:
         logger.warning("holiday fetch error: {}", exc)
-        # Return stale cache if available
-        if isinstance(entry, dict):
-            return entry.get("data")
+        _cache["backoff"] = datetime.datetime.utcnow()
+        # Return stale cache recomputed against today if available
+        if entry and isinstance(entry, dict) and entry.get("holiday_date"):
+            hd = entry["holiday_date"]
+            if hd >= today:
+                return (entry["nikud"], (hd - today).days)
         return None

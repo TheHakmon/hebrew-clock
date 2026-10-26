@@ -469,8 +469,12 @@ def generate_clock_image(
         _has_latin = any(c.isascii() and c.isalpha() for c in countdown_label)
         if _has_latin:
             _latin_font_path = settings.font_dir / "OpenSans-VariableFont_wdth,wght.ttf"
+            _latin_available = _latin_font_path.exists()
             def _fit_latin(text: str, start: int, minimum: int = 14) -> ImageFont.FreeTypeFont:
-                f = ImageFont.truetype(str(_latin_font_path), start)
+                try:
+                    f = ImageFont.truetype(str(_latin_font_path), start)
+                except OSError:
+                    return _fit_right(text, start)  # fallback to Hebrew font
                 while True:
                     bbox = draw.textbbox((0, 0), text, font=f)
                     if (bbox[2] - bbox[0]) <= right_cell_w:
@@ -478,7 +482,10 @@ def generate_clock_image(
                     cur = f.size if hasattr(f, 'size') else start
                     if cur <= minimum:
                         return f
-                    f = ImageFont.truetype(str(_latin_font_path), cur - 2)
+                    try:
+                        f = ImageFont.truetype(str(_latin_font_path), cur - 2)
+                    except OSError:
+                        return _fit_right(text, cur - 2)
             label_font = _fit_latin(countdown_label, 28)
         else:
             label_font = _fit_right(countdown_label, 34)
