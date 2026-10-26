@@ -77,7 +77,7 @@ async def get_clock(
     public:          bool = Query(default=False),  # website version: hide birthdays/anniversary & personal trip
 ) -> Response:
     # Determine countdown source
-    if countdown_label and countdown_days >= 0:
+    if not public and countdown_label and countdown_days >= 0:
         # ESP32 sent a custom countdown override
         c_label: str | None = countdown_label
         c_days:  int | None = countdown_days

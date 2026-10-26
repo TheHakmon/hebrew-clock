@@ -103,11 +103,15 @@ int daysUntil(const String& isoDate) {
     target.tm_mon  = isoDate.substring(5, 7).toInt() - 1;
     target.tm_mday = isoDate.substring(8, 10).toInt();
     target.tm_hour = 12;  // noon to avoid DST edge cases
-    time_t t_now    = mktime(&ti);
-    time_t t_target = mktime(&target);
-    // Truncate to days
-    time_t today_noon = t_now - (t_now % 86400) + 43200;
-    return (int)((t_target - today_noon) / 86400);
+    // Use local-date arithmetic to avoid UTC/Israel offset errors
+    struct tm today = {};
+    today.tm_year  = ti.tm_year;
+    today.tm_mon   = ti.tm_mon;
+    today.tm_mday  = ti.tm_mday;
+    today.tm_hour  = 12;
+    today.tm_isdst = -1;
+    target.tm_isdst = -1;
+    return (int)lround(difftime(mktime(&target), mktime(&today)) / 86400.0);
 }
 
 String buildFetchUrl() {
@@ -496,11 +500,7 @@ void setup() {
     countdownName    = prefs.getString("cd_name",     "");
     countdownDate    = prefs.getString("cd_date",     "");
     prefs.end();
-    // If stored countdown date has passed, clear it
-    if (countdownDate.length() == 10 && daysUntil(countdownDate) < 0) {
-        countdownName = "";
-        countdownDate = "";
-    }
+    // (Expiry check moved to after NTP sync below)
 
     // Init RTC if enabled
     bool rtcAvailable = false;
@@ -536,6 +536,20 @@ void setup() {
         }
     } else if (!ntpOk) {
         Serial.println("NTP failed and no RTC — sleep window unavailable");
+    }
+
+    // Clear saved countdown only after time is confirmed (avoid clearing on cold boot before NTP)
+    if (ntpOk || rtcAvailable) {
+        if (countdownDate.length() == 10 && daysUntil(countdownDate) < 0) {
+            countdownName = "";
+            countdownDate = "";
+            Preferences p2;
+            p2.begin("epaper", false);
+            p2.putString("cd_name", "");
+            p2.putString("cd_date", "");
+            p2.end();
+            Serial.println("Cleared expired countdown");
+        }
     }
 
     Serial.printf("Font: %s  Location: %s\n", selectedFont.c_str(), location.c_str());
